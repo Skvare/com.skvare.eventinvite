@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/event/manage/invitees</path>
+    <page_callback>CRM_Eventinvite_Form_ManageEvent_Invitees</page_callback>
+    <title>Invitee Notifications</title>
+    <access_arguments>access CiviEvent</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/event/exportinvitees</path>
+    <page_callback>CRM_Eventinvite_Page_ExportInvitees</page_callback>
+    <title>ExportInvitees</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/event/inviteelist</path>
+    <page_callback>CRM_Eventinvite_Page_InviteeList</page_callback>
+    <title>InviteeList</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+</menu>

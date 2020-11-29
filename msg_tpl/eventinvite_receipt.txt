@@ -1,0 +1,7 @@
+Dear&nbsp;{contact.display_name},
+
+Your Event Invite message is here.
+
+Sincerely,
+
+{domain.name}

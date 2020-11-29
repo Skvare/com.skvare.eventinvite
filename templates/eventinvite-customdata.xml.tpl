@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+
+<CustomData>
+  <CustomGroups>
+    <CustomGroup>
+      <name>{$eventinvite_custom_group_name}</name>
+      <title>Event Invites</title>
+      <extends>Event</extends>
+      <style>Inline</style>
+      <collapse_display>1</collapse_display>
+      <help_pre></help_pre>
+      <help_post></help_post>
+      <weight>2</weight>
+      <is_active>1</is_active>
+      <table_name>civicrm_value_eventinvite_{$customIDs.civicrm_custom_group}</table_name>
+      <is_multiple>0</is_multiple>
+      <collapse_adv_display>0</collapse_adv_display>
+      <is_reserved>1</is_reserved>
+      <is_public>0</is_public>
+    </CustomGroup>
+  </CustomGroups>
+  <CustomFields>
+    <CustomField>
+      <name>event_invites</name>
+      <label>Invite(s)</label>
+      <data_type>String</data_type>
+      <html_type>Autocomplete-Select</html_type>
+      <is_required>0</is_required>
+      <is_searchable>0</is_searchable>
+      <is_search_range>0</is_search_range>
+      <weight>1</weight>
+      <is_active>1</is_active>
+      <is_view>0</is_view>
+      <text_length>255</text_length>
+      <note_columns>0</note_columns>
+      <note_rows>0</note_rows>
+      <column_name>event_invites_{$customIDs.civicrm_custom_field}</column_name>
+      <custom_group_name>{$eventinvite_custom_group_name}</custom_group_name>
+      <serialize>1</serialize>
+    </CustomField>
+    <CustomField>
+      <name>additional_event_invites</name>
+      <label>Additional Event Invite</label>
+      <data_type>String</data_type>
+      <html_type>Autocomplete-Select</html_type>
+      <is_required>0</is_required>
+      <is_searchable>1</is_searchable>
+      <is_search_range>0</is_search_range>
+      <weight>2</weight>
+      <is_active>1</is_active>
+      <is_view>0</is_view>
+      <text_length>255</text_length>
+      <note_columns></note_columns>
+      <note_rows></note_rows>
+      <column_name>additional_event_invites_{$customIDs.civicrm_custom_field+1}</column_name>
+      <custom_group_name>{$eventinvite_custom_group_name}</custom_group_name>
+      <serialize>1</serialize>
+    </CustomField>
+    <CustomField>
+      <name>enable_rsvp_workflow</name>
+      <label>Enable RSVP Workflow</label>
+      <data_type>Boolean</data_type>
+      <html_type>Radio</html_type>
+      <default_value>0</default_value>
+      <is_required>0</is_required>
+      <is_searchable>0</is_searchable>
+      <is_search_range>0</is_search_range>
+      <weight>3</weight>
+      <is_active>1</is_active>
+      <is_view>0</is_view>
+      <text_length>255</text_length>
+      <note_columns>0</note_columns>
+      <note_rows>0</note_rows>
+      <column_name>enable_rsvp_workflow{$customIDs.civicrm_custom_field+3}</column_name>
+      <custom_group_name>{$eventinvite_custom_group_name}</custom_group_name>
+    </CustomField>
+  </CustomFields>
+</CustomData>
