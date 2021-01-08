@@ -38,7 +38,7 @@
             <tr>
               <td>{$row.notification_date}</td>
               <td>{$row.recipients_value}</td>
-              <td>{$row.from_email_value}</td>
+              <td>{$row.from_email}</td>
               <td>{$row.msg_text}</td>
             </tr>
           {/foreach}

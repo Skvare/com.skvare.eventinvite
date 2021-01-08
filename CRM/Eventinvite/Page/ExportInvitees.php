@@ -21,38 +21,34 @@ class CRM_Eventinvite_Page_ExportInvitees extends CRM_Core_Page {
       $rows = $this->getEventInvitees($eventID, $exportType);
       $this->generateExport("Event{$eventID}_{$exportType}", $rows);
     }
-    //Civi::log()->debug('CRM_Eventinvite_Page_ExportInvitees::run', array('rows' => $rows));
-
 
     CRM_Utils_System::civiExit();
   }
 
+  /**
+   * @param $invitationID
+   * @return array
+   */
   function getNotificationInvitees($invitationID) {
-    $contacts = CRM_Core_DAO::singleValueQuery("
-      SELECT contacts
-      FROM civicrm_eventinvite_notifications
-      WHERE id = %1
-    ", [
-      1 => [$invitationID, 'Positive']
-    ]);
-
-    $contacts = json_decode($contacts);
+    $sqlQuery = "SELECT en.id, en.event_id, ec.contact_id, c.display_name, e.email
+      FROM civicrm_eventinvite_notifications en 
+      INNER JOIN civicrm_eventinvite_contact ec ON (en.id = ec.notification_id)
+      INNER JOIN civicrm_contact c ON (c.id = ec.contact_id)
+      INNER JOIN civicrm_email e ON (e.contact_id = c.id and e.is_primary = 1) 
+      WHERE en.id = %1";
+    $dao = CRM_Core_DAO::executeQuery($sqlQuery, [1 => [$invitationID, 'Positive']]);
     $list = [];
-
-    foreach ($contacts as $cid => $contact) {
-      $contactDetails = civicrm_api3('contact', 'getsingle', ['id' => $cid]);
-      //Civi::log()->debug('CRM_Eventinvite_Page_ExportInvitees::getInvitees', array('$contactDetails' => $contactDetails));
-
+    while ($dao->fetch()) {
+      $contactDetails = civicrm_api3('contact', 'getsingle', ['id' => $dao->contact_id]);
       $list[] = [
-        'id' => $cid,
-        'display_name' => $contact->display_name,
+        'id' => $dao->contact_id,
+        'display_name' => $dao->display_name,
         'sort_name' => $contactDetails['sort_name'],
-        'email' => $contact->email,
+        'email' => $dao->email,
         'current_employer' => $contactDetails['current_employer'],
         'job_title' => $contactDetails['job_title'],
       ];
     }
-
     //sort by last name
     usort($list, function ($item1, $item2) {
       if ($item1['sort_name'] == $item2['sort_name'])

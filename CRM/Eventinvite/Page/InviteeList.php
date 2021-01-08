@@ -6,22 +6,23 @@ class CRM_Eventinvite_Page_InviteeList extends CRM_Core_Page {
     $invitationID = CRM_Utils_Request::retrieve('invitation_id', 'Positive', $this, TRUE);
 
     $contacts = CRM_Core_DAO::singleValueQuery("
-      SELECT contacts
-      FROM civicrm_eventinvite_notifications
-      WHERE id = %1
+      SELECT c.id, c.display_name, c.sort_name, e.email
+      FROM civicrm_eventinvite_contact ec
+      INNER JOIN civicrm_contact c ON (c.id = ec.contact_id)
+      LEFT JOIN civicrm_email e ON (e.contact_id = c.id)
+      WHERE ec.id = %1
     ", [
       1 => [$invitationID, 'Positive']
     ]);
 
     $contacts = json_decode($contacts);
     $list = [];
-
-    foreach ($contacts as $cid => $contact) {
+    while ($dao->fetch()) {
       $list[] = [
-        'id' => $cid,
-        'name' => $contact->display_name,
-        'email' => $contact->email,
-        'sort_name' => (!empty($contact->sort_name)) ? $contact->sort_name : $contact->display_name,
+        'id' => $dao->id,
+        'name' => $dao->display_name,
+        'email' => $dao->email,
+        'sort_name' => (!empty($dao->sort_name)) ? $dao->sort_name : $dao->display_name,
       ];
     }
 
@@ -34,12 +35,6 @@ class CRM_Eventinvite_Page_InviteeList extends CRM_Core_Page {
     });
 
     $this->assign('recipientsList', $list);
-
-    /*Civi::log()->debug('', array(
-      'invitationID' => $invitationID,
-      '$contacts' => $contacts,
-      '$list' => $list,
-    ));*/
 
     parent::run();
   }

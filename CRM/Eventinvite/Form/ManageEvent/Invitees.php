@@ -47,7 +47,7 @@ class CRM_Eventinvite_Form_ManageEvent_Invitees extends CRM_Event_Form_ManageEve
       3 => 'Registered Contacts'
     ];
     $this->addRadio('recipients', ts('Recipients'), $options, ['allowClear' => FALSE]);
-
+    $descriptions['recipients'] = 'Recipients for "All Invitees", "Unregistered Invitees" are coming from Group(s) configured in "Event Invites -> Invite(s)" Custom Field in "Info and Settings" tab.';
     //build from address options
     $fromAddresses = civicrm_api3('OptionValue', 'get', [
       'options' => ['limit' => 0],
@@ -67,19 +67,16 @@ class CRM_Eventinvite_Form_ManageEvent_Invitees extends CRM_Event_Form_ManageEve
     }
     asort($this->_fromEmails);
     $this->add('select', 'fromEmailAddress', ts('From'), $this->_fromEmails, TRUE, ['class' => 'crm-select2 huge']);
-    /*Civi::log()->debug('buildQuickForm', array(
-      '$this->_fromEmails' => $this->_fromEmails,
-      '$contactEmails' => $contactEmails,
-    ));*/
 
-    $this->add(
-      'textarea', // field type
-      'invitee_text', // field name
-      'Email Text', // field label
-      ['rows' => 10, 'cols' => 60], // list of attributes
-      TRUE // is required
-    );
-    $descriptions['invitee_text'] = 'Enter the text for the body of the email. The content will be inserted into the standard Event Invite email template with the greeting "Dear Full Name:". In addition, a link to the event information page will be appended to the email body.';
+    $attributes = ['class' => 'huge'];
+    $this->add('text', 'subject', ts('Email Subject'), $attributes + ['placeholder' => ts('Optional')]);
+    $this->add('textarea', 'invitee_text', 'Email Text', ['rows' => 10, 'cols' => 60], TRUE);
+    $descriptions['invitee_text'] = 'Enter the short text message. The content will be inserted into the standard template selected in "Message Template for Notification"  (if {$msg_text|htmlize} token is used). 
+        <br/>In addition, a link to the event information page will be appended to the email body if {$eventUrl} token is used.';
+
+    $templateList = CRM_Core_BAO_MessageTemplate::getMessageTemplates(FALSE);
+    $this->add('select', 'msg_id', ts('Message Template for Notification'), $templateList, TRUE, ['class' => 'crm-select2']);
+    $descriptions['msg_id'] = 'Select the Message Template Or Create/update Message template by visiting Template Section, update the content as per requirement.';
 
     $notificationLog = CRM_Eventinvite_Utils::getNotificationLog($eventId, $this->_fromEmails);
     $this->assign('notificationLog', $notificationLog);
@@ -167,14 +164,9 @@ class CRM_Eventinvite_Form_ManageEvent_Invitees extends CRM_Event_Form_ManageEve
     }
     //Civi::log()->debug('postProcess', array('$recipients' => $recipients));
 
-    //cycle through recipients and send email
-    foreach ($recipients as $recipient) {
-      CRM_Eventinvite_Utils::sendNotification($recipient, $values, $this->_fromEmails);
-    }
-
-    //store log
+    //store invite
+    $values['fromEmailAddress'] = $this->_fromEmails[$values['fromEmailAddress']];
     CRM_Eventinvite_Utils::storeNotificationLog($values, $recipients);
-
     parent::endPostProcess();
   }
 

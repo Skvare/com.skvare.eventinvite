@@ -235,10 +235,10 @@ class CRM_Eventinvite_Utils extends CRM_Eventinvite_Upgrader_Base {
    *
    * cycle through invitees and remove any where email is missing
    */
-  static function cleanInvitees($eventInvitees) {
+  static function cleanInvitees(&$eventInvitees) {
     foreach ($eventInvitees as $id => $eventInvitee) {
       if (empty($eventInvitee['email'])) {
-        unset($eventInvitee[$id]);
+        unset($eventInvitees[$id]);
       }
     }
 
@@ -253,7 +253,7 @@ class CRM_Eventinvite_Utils extends CRM_Eventinvite_Upgrader_Base {
    * @param $fromEmails
    * @return array
    */
-  function getNotificationLog($eventId, $fromEmails) {
+  public static function getNotificationLog($eventId, $fromEmails) {
     $logs = [];
     $recipientOptions = [
       1 => 'All Invitees',
@@ -282,9 +282,9 @@ class CRM_Eventinvite_Utils extends CRM_Eventinvite_Upgrader_Base {
             </a>
           ",
           'from_email' => $dao->from_email,
-          'from_email_value' => $fromEmails[$dao->from_email],
+          //'from_email_value' => $fromEmails[$dao->from_email],
           'msg_text' => $dao->msg_text,
-          'contacts' => json_decode($dao->contacts),
+          //'contacts' => json_decode($dao->contacts),
           'notification_date' => date('m/d/Y H:i:s', strtotime($dao->notification_date)),
         ];
       }
@@ -300,48 +300,93 @@ class CRM_Eventinvite_Utils extends CRM_Eventinvite_Upgrader_Base {
    * store a record of the notification
    */
   function storeNotificationLog($values, $recipients) {
-    CRM_Core_DAO::executeQuery("
+    $dao = CRM_Core_DAO::executeQuery("
       INSERT INTO civicrm_eventinvite_notifications
-      (event_id, recipients, from_email, msg_text, contacts, notification_date)
+      (event_id, recipients, from_email, msg_text, notification_date, msg_id, subject)
       VALUES
-      (%1, %2, %3, %4, %5, NOW())
+      (%1, %2, %3, %4, NOW(), %5, %6);
     ", [
       1 => [$values['event_id'], 'Positive'],
       2 => [$values['recipients'], 'Positive'],
-      3 => [$values['fromEmailAddress'], 'Positive'],
+      3 => [$values['fromEmailAddress'], 'String'],
       4 => [$values['invitee_text'], 'String'],
-      5 => [json_encode($recipients), 'String'],
+      5 => [$values['msg_id'], 'Positive'],
+      6 => [$values['subject'], 'String'],
     ]);
+    $lastId = CRM_Core_DAO::singleValueQuery('SELECT LAST_INSERT_ID()');
+    foreach ($recipients as $cid => $recipient) {
+      CRM_Core_DAO::executeQuery("
+      INSERT INTO civicrm_eventinvite_contact
+      (notification_id, contact_id)
+      VALUES
+      (%1, %2)
+    ", [
+        1 => [$lastId, 'Positive'],
+        2 => [$cid, 'Positive'],
+      ]);
+    }
   }
 
   /**
    * @param $recipient
-   * @param $values
-   *
-   * send email
+   * @return mixed
    */
-  function sendNotification($recipient, $values, $fromEmails) {
-    $params = [
-      'toName' => $recipient['display_name'],
-      'toEmail' => $recipient['email'],
-      'from' => htmlspecialchars_decode($fromEmails[$values['fromEmailAddress']]),
-      'subject' => $values['event_title'],
-      'html' => self::buildEmailContent($values['invitee_text'], $recipient['display_name'], $values['event_id']),
+  function sendNotification($recipient) {
+    $url = CRM_Utils_System::url('civicrm/event/info', "reset=1&id={$recipient['event_id']}", TRUE, NULL, TRUE, TRUE);
+    $tplParams = [
+      'subject' => $recipient['subject']?? '',
+      'eventUrl' => $url,
+      'msg_text' => $recipient['msg_text'],
     ];
-    //Civi::log()->debug('_sendNotification', array('params' => $params));
 
-    if (Civi::settings()->get('event_invitee_notification')) {
-      CRM_Utils_Mail::send($params);
+    $sendTemplateParams = [
+      'messageTemplateID' => $recipient['msg_id'],
+      'contactId' => $recipient['to_cid'],
+      'toName' => $recipient['to_name'],
+      'toEmail' => $recipient['to_email'],
+      'from' => $recipient['from_email'],
+      'tplParams' => $tplParams,
+    ];
+    if (!empty($recipient['subject'])) {
+      $sendTemplateParams['subject'] = $recipient['subject'];
     }
-    else {
-      CRM_Core_Error::debug_var('Event invite _sendNotifications', $params, TRUE, TRUE, 'invites');
-    }
+    echo '<pre>$sendTemplateParams : ';
+    print_r($sendTemplateParams);
+    echo '</pre>';
+    list($sent, $subject, $message, $html) = CRM_Core_BAO_MessageTemplate::sendTemplate($sendTemplateParams);
+
+    return $sent;
   }
 
-  function buildEmailContent($text, $name, $eventId) {
-    $text = nl2br($text);
-    $date = date('F/j/Y');
-    $url = CRM_Utils_System::url('civicrm/event/info', "reset=1&id={$eventId}", TRUE, NULL, TRUE, TRUE);
+  /**
+   * @return array
+   */
+  function getNotificationList() {
+    $sql = "SELECT ec.id, en.event_id, en.from_email, en.msg_id, en.subject, en.msg_text, ec.contact_id, c.display_name, e.email
+      FROM civicrm_eventinvite_notifications en 
+      INNER JOIN civicrm_eventinvite_contact ec ON (en.id = ec.notification_id AND ec.status_id = 2)
+      INNER JOIN civicrm_contact c ON (c.id = ec.contact_id)
+      INNER JOIN civicrm_email e ON (e.contact_id = c.id and e.is_primary = 1)
+      WHERE 
+            ec.status_id = 2
+        AND c.do_not_email = 0
+        AND c.is_deceased <> 1
+        AND e.on_hold = 0
+        AND c.is_opt_out = 0
+      LIMIT 500";
+    $dao = CRM_Core_DAO::executeQuery($sql);
+    $receiptList = [];
+    while ($dao->fetch()) {
+      $receiptList[] =
+        [
+          'nc_id' => $dao->id, 'event_id' => $dao->event_id,
+          'from_email' => $dao->from_email,
+          'to_cid' => $dao->contact_id, 'to_name' => $dao->display_name, 'to_email' => $dao->email,
+          'msg_id' => $dao->msg_id, 'msg_text' => $dao->msg_text, 'subject' => $dao->subject
+        ];
+    }
+
+    return $receiptList;
   }
 
 }
